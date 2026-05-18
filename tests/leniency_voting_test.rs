@@ -1,11 +1,12 @@
 use soroban_sdk::{Address, Env, String, Symbol};
-use sorosusu_contracts::{SoroSusu, SoroSusuTrait, DataKey, LeniencyVote, LeniencyRequestStatus, MemberStatus};
+use soroban_sdk::testutils::{Address as _, Ledger};
+use sorosusu_contracts::{SoroSusu, SoroSusuClient, DataKey, LeniencyVote, LeniencyRequestStatus, MemberStatus};
 
 #[test]
 fn test_request_leniency() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -32,7 +33,7 @@ fn test_request_leniency() {
     
     // Request leniency
     let reason = String::from_str(&env, "Medical emergency - need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Verify request was created
     let request = client.get_leniency_request(&circle_id, &requester);
@@ -48,7 +49,7 @@ fn test_request_leniency() {
 fn test_vote_on_leniency_approval() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -81,7 +82,7 @@ fn test_vote_on_leniency_approval() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time for payment");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Vote to approve (need majority of 3 other members = 2 votes)
     client.vote_on_leniency(&voter1, &circle_id, &requester, &LeniencyVote::Approve);
@@ -104,7 +105,7 @@ fn test_vote_on_leniency_approval() {
 fn test_vote_on_leniency_rejection() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -137,7 +138,7 @@ fn test_vote_on_leniency_rejection() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Vote to reject (need majority of 3 other members = 2 votes)
     client.vote_on_leniency(&voter1, &circle_id, &requester, &LeniencyVote::Reject);
@@ -154,7 +155,7 @@ fn test_vote_on_leniency_rejection() {
 fn test_cannot_vote_for_own_request() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -181,14 +182,12 @@ fn test_cannot_vote_for_own_request() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Try to vote for own request - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "vote_on_leniency"),
-        (requester, circle_id, requester, LeniencyVote::Approve),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.vote_on_leniency(&requester, &circle_id, &requester, &LeniencyVote::Approve);
+    }));
     assert!(result.is_err());
 }
 
@@ -196,7 +195,7 @@ fn test_cannot_vote_for_own_request() {
 fn test_double_voting_prevention() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -225,17 +224,15 @@ fn test_double_voting_prevention() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Vote once
     client.vote_on_leniency(&voter, &circle_id, &requester, &LeniencyVote::Approve);
     
     // Try to vote again - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "vote_on_leniency"),
-        (voter, circle_id, requester, LeniencyVote::Approve),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.vote_on_leniency(&voter, &circle_id, &requester, &LeniencyVote::Approve);
+    }));
     assert!(result.is_err());
 }
 
@@ -243,7 +240,7 @@ fn test_double_voting_prevention() {
 fn test_social_capital_tracking() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -272,7 +269,7 @@ fn test_social_capital_tracking() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Vote to approve
     client.vote_on_leniency(&voter, &circle_id, &requester, &LeniencyVote::Approve);
@@ -293,7 +290,7 @@ fn test_social_capital_tracking() {
 fn test_leniency_stats_tracking() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -326,13 +323,13 @@ fn test_leniency_stats_tracking() {
     
     // Request leniency for requester1
     let reason1 = String::from_str(&env, "Medical emergency");
-    client.request_leniency(&requester1, &circle_id, reason1);
+    client.request_leniency(&requester1, &circle_id, &reason1);
     client.vote_on_leniency(&voter1, &circle_id, &requester1, &LeniencyVote::Approve);
     client.vote_on_leniency(&voter2, &circle_id, &requester1, &LeniencyVote::Approve);
     
     // Request leniency for requester2
     let reason2 = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester2, &circle_id, reason2);
+    client.request_leniency(&requester2, &circle_id, &reason2);
     client.vote_on_leniency(&voter1, &circle_id, &requester2, &LeniencyVote::Reject);
     client.vote_on_leniency(&voter2, &circle_id, &requester2, &LeniencyVote::Reject);
     
@@ -349,7 +346,7 @@ fn test_leniency_stats_tracking() {
 fn test_grace_period_prevents_late_fees() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -378,7 +375,7 @@ fn test_grace_period_prevents_late_fees() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     client.vote_on_leniency(&voter, &circle_id, &requester, &LeniencyVote::Approve);
     
     // Advance time past original deadline but within grace period
@@ -398,7 +395,7 @@ fn test_grace_period_prevents_late_fees() {
 fn test_voting_period_expiration() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -427,17 +424,15 @@ fn test_voting_period_expiration() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Advance time past voting period
     env.ledger().set_timestamp(env.ledger().timestamp() + 90000); // 25 hours later
     
     // Try to vote - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "vote_on_leniency"),
-        (voter, circle_id, requester, LeniencyVote::Approve),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.vote_on_leniency(&voter, &circle_id, &requester, &LeniencyVote::Approve);
+    }));
     assert!(result.is_err());
     
     // Finalize the expired vote
@@ -452,7 +447,7 @@ fn test_voting_period_expiration() {
 fn test_minimum_participation_requirement() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -481,7 +476,7 @@ fn test_minimum_participation_requirement() {
     
     // Request leniency
     let reason = String::from_str(&env, "Need extra time");
-    client.request_leniency(&requester, &circle_id, reason);
+    client.request_leniency(&requester, &circle_id, &reason);
     
     // Only one vote (need 50% participation of 1 other member = 1 vote minimum)
     client.vote_on_leniency(&voter, &circle_id, &requester, &LeniencyVote::Approve);

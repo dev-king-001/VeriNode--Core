@@ -1,11 +1,12 @@
+use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{Address, Env, String, Symbol};
-use sorosusu_contracts::{SoroSusu, SoroSusuTrait, DataKey, CollateralStatus, MemberStatus};
+use sorosusu_contracts::{SoroSusu, SoroSusuClient, DataKey, CollateralStatus, MemberStatus};
 
 #[test]
 fn test_collateral_required_for_high_value_circles() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -40,7 +41,7 @@ fn test_collateral_required_for_high_value_circles() {
 fn test_collateral_not_required_for_low_value_circles() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -74,7 +75,7 @@ fn test_collateral_not_required_for_low_value_circles() {
 fn test_stake_collateral() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -119,7 +120,7 @@ fn test_stake_collateral() {
 fn test_join_circle_requires_collateral() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -144,11 +145,9 @@ fn test_join_circle_requires_collateral() {
     );
     
     // Try to join without staking collateral - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "join_circle"),
-        (user.clone(), circle_id, 1u32, Option::<Address>::None),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.join_circle(&user, &circle_id, &1u32, &Option::<Address>::None);
+    }));
     assert!(result.is_err());
     
     // Stake collateral first
@@ -164,7 +163,7 @@ fn test_join_circle_requires_collateral() {
 fn test_mark_member_defaulted_and_slash_collateral() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -215,7 +214,7 @@ fn test_mark_member_defaulted_and_slash_collateral() {
 fn test_release_collateral_after_completion() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -272,7 +271,7 @@ fn test_release_collateral_after_completion() {
 fn test_insufficient_collateral_amount() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -302,11 +301,9 @@ fn test_insufficient_collateral_amount() {
     let insufficient_amount = required_collateral - 100_000_0; // Less than required
     
     // Try to stake insufficient collateral - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "stake_collateral"),
-        (user, circle_id, insufficient_amount),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.stake_collateral(&user, &circle_id, &insufficient_amount);
+    }));
     assert!(result.is_err());
 }
 
@@ -314,7 +311,7 @@ fn test_insufficient_collateral_amount() {
 fn test_double_collateral_staking() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -346,10 +343,8 @@ fn test_double_collateral_staking() {
     client.stake_collateral(&user, &circle_id, &required_collateral);
     
     // Try to stake again - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "stake_collateral"),
-        (user, circle_id, required_collateral),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.stake_collateral(&user, &circle_id, &required_collateral);
+    }));
     assert!(result.is_err());
 }

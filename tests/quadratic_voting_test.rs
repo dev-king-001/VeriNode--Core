@@ -1,11 +1,13 @@
 use soroban_sdk::{Address, Env, String, Symbol};
-use sorosusu_contracts::{SoroSusu, SoroSusuTrait, DataKey, ProposalType, ProposalStatus, QuadraticVoteChoice};
+use soroban_sdk::testutils::Address as _;
+use soroban_sdk::testutils::Ledger;
+use sorosusu_contracts::{SoroSusu, SoroSusuClient, DataKey, ProposalType, ProposalStatus, QuadraticVoteChoice};
 
 #[test]
 fn test_quadratic_voting_enabled_for_large_groups() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -52,7 +54,7 @@ fn test_quadratic_voting_enabled_for_large_groups() {
 fn test_create_proposal() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -92,7 +94,7 @@ fn test_create_proposal() {
     );
     
     // Verify proposal was created
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert_eq!(proposal.proposer, proposer);
     assert_eq!(proposal.circle_id, circle_id);
     assert_eq!(proposal.proposal_type, ProposalType::ChangeLateFee);
@@ -105,7 +107,7 @@ fn test_create_proposal() {
 fn test_create_proposal_fails_for_small_groups() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -135,11 +137,9 @@ fn test_create_proposal_fails_for_small_groups() {
     let description = String::from_str(&env, "Test description");
     let execution_data = String::from_str(&env, "{}");
     
-    let result = env.try_invoke_contract::<_, u64>(
-        &contract_id,
-        &Symbol::new(&env, "create_proposal"),
-        (proposer, circle_id, ProposalType::ChangeLateFee, title, description, execution_data),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.create_proposal(&proposer, &circle_id, &ProposalType::ChangeLateFee, &title, &description, &execution_data);
+    }));
     assert!(result.is_err());
 }
 
@@ -147,7 +147,7 @@ fn test_create_proposal_fails_for_small_groups() {
 fn test_voting_power_calculation() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -189,7 +189,7 @@ fn test_voting_power_calculation() {
 fn test_quadratic_vote_cost_calculation() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -237,7 +237,7 @@ fn test_quadratic_vote_cost_calculation() {
     client.quadratic_vote(&voter, &proposal_id, &10u32, &QuadraticVoteChoice::For);
     
     // Verify vote was recorded
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert_eq!(proposal.for_votes, 100); // 10^2 = 100
     assert_eq!(proposal.against_votes, 0);
     assert!(proposal.total_voting_power > 0);
@@ -247,7 +247,7 @@ fn test_quadratic_vote_cost_calculation() {
 fn test_insufficient_voting_power() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -292,17 +292,15 @@ fn test_insufficient_voting_power() {
     client.update_voting_power(&voter, &circle_id, &1_000_000_0);
     
     // Try to vote with weight 10 (cost = 10^2 = 100) - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "quadratic_vote"),
-        (voter, proposal_id, 10u32, QuadraticVoteChoice::For),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.quadratic_vote(&voter, &proposal_id, &10u32, &QuadraticVoteChoice::For);
+    }));
     assert!(result.is_err());
     
     // But voting with weight 5 should work (cost = 5^2 = 25)
     client.quadratic_vote(&voter, &proposal_id, &5u32, &QuadraticVoteChoice::For);
     
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert_eq!(proposal.for_votes, 25); // 5^2 = 25
 }
 
@@ -310,7 +308,7 @@ fn test_insufficient_voting_power() {
 fn test_double_voting_prevention() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -358,11 +356,9 @@ fn test_double_voting_prevention() {
     client.quadratic_vote(&voter, &proposal_id, &5u32, &QuadraticVoteChoice::For);
     
     // Try to vote again - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "quadratic_vote"),
-        (voter, proposal_id, 3u32, QuadraticVoteChoice::Against),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.quadratic_vote(&voter, &proposal_id, &3u32, &QuadraticVoteChoice::Against);
+    }));
     assert!(result.is_err());
 }
 
@@ -370,7 +366,7 @@ fn test_double_voting_prevention() {
 fn test_quorum_requirement() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -420,13 +416,13 @@ fn test_quorum_requirement() {
     // Vote with low participation (should not meet quorum)
     client.quadratic_vote(&voter1, &proposal_id, &2u32, &QuadraticVoteChoice::For); // Cost: 4
     
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert!(!proposal.quorum_met); // Should not meet 40% quorum
     
     // Add more votes to meet quorum
     client.quadratic_vote(&voter2, &proposal_id, &3u32, &QuadraticVoteChoice::For); // Cost: 9
     
-    let updated_proposal = client.get_proposal(proposal_id);
+    let updated_proposal = client.get_proposal(&proposal_id);
     assert_eq!(updated_proposal.for_votes, 13); // 4 + 9
     assert!(updated_proposal.quorum_met); // Should now meet quorum
 }
@@ -435,7 +431,7 @@ fn test_quorum_requirement() {
 fn test_proposal_execution() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -497,13 +493,13 @@ fn test_proposal_execution() {
     client.execute_proposal(&admin, &proposal_id);
     
     // Verify proposal was approved and executed
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert_eq!(proposal.status, ProposalStatus::Executed);
     assert_eq!(proposal.for_votes, 164); // 100 + 64
     assert_eq!(proposal.against_votes, 4);
     
     // Check stats
-    let stats = client.get_proposal_stats(circle_id);
+    let stats = client.get_proposal_stats(&circle_id);
     assert_eq!(stats.executed_proposals, 1);
     assert_eq!(stats.approved_proposals, 1);
 }
@@ -512,7 +508,7 @@ fn test_proposal_execution() {
 fn test_proposal_rejection_insufficient_majority() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -570,13 +566,13 @@ fn test_proposal_rejection_insufficient_majority() {
     client.execute_proposal(&admin, &proposal_id);
     
     // Verify proposal was rejected (50% < 60% required)
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert_eq!(proposal.status, ProposalStatus::Rejected);
     assert_eq!(proposal.for_votes, 100);
     assert_eq!(proposal.against_votes, 100);
     
     // Check stats
-    let stats = client.get_proposal_stats(circle_id);
+    let stats = client.get_proposal_stats(&circle_id);
     assert_eq!(stats.rejected_proposals, 1);
 }
 
@@ -584,7 +580,7 @@ fn test_proposal_rejection_insufficient_majority() {
 fn test_max_vote_weight_enforcement() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SoroSusu);
-    let client = SoroSusuTrait::new(&env, &contract_id);
+    let client = SoroSusuClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
     let creator = Address::generate(&env);
@@ -629,16 +625,14 @@ fn test_max_vote_weight_enforcement() {
     client.update_voting_power(&voter, &circle_id, &100_000_000_0);
     
     // Try to vote with weight > MAX_VOTE_WEIGHT (100) - should fail
-    let result = env.try_invoke_contract::<_, ()>(
-        &contract_id,
-        &Symbol::new(&env, "quadratic_vote"),
-        (voter, proposal_id, 150u32, QuadraticVoteChoice::For),
-    );
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        client.quadratic_vote(&voter, &proposal_id, &150u32, &QuadraticVoteChoice::For);
+    }));
     assert!(result.is_err());
     
     // Voting with max weight should work
     client.quadratic_vote(&voter, &proposal_id, &100u32, &QuadraticVoteChoice::For);
     
-    let proposal = client.get_proposal(proposal_id);
+    let proposal = client.get_proposal(&proposal_id);
     assert_eq!(proposal.for_votes, 10000); // 100^2 = 10000
 }
