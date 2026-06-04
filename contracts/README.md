@@ -1,6 +1,6 @@
-# SoroSusu Contracts
+# VeriNode--Core Contracts
 
-Rust smart contracts for SoroSusu: a trustless, automated Rotating Savings and Credit Association (ROSCA) built on Stellar Soroban.
+Rust smart contracts for VeriNode--Core: a trustless, automated Rotating Savings and Credit Association (ROSCA) built on Stellar Soroban.
 
 ---
 

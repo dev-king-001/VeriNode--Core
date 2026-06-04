@@ -2,7 +2,7 @@
 name = "sorosusu-contracts"
 version = "0.1.0"
 edition = "2021"
-description = "Core logic for the SoroSusu ROSCA protocol on Stellar"
+description = "Core logic for the VeriNode ROSCA protocol on Stellar"
 license = "MIT"
 
 [lib]

@@ -1,4 +1,4 @@
-# SoroSusu: Decentralized Savings Circle
+# VeriNode--Core: Decentralized Savings Circle
 
 A trustless Rotating Savings and Credit Association (ROSCA) built on Stellar Soroban.
 

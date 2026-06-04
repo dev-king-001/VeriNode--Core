@@ -1,4 +1,4 @@
-# SoroSusu Events Implementation
+# VeriNode--Core Events Implementation
 
 ## Issue #25: Events - Emit CycleCompleted and GroupRollover
 

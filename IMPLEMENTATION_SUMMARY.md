@@ -1,4 +1,4 @@
-# SoroSusu Contracts Implementation Summary
+# VeriNode--Core Contracts Implementation Summary
 
 ## Features Implemented
 

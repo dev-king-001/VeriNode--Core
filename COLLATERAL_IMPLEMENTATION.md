@@ -288,4 +288,4 @@ cargo test --test collateral_test
 
 The collateralized entry barrier significantly enhances the security and reliability of high-value Susu groups on the Stellar network. By requiring members to lock substantial collateral, the system creates strong financial incentives for participation and completion, while protecting remaining members from default losses.
 
-This implementation enables larger, more serious capital rotation while maintaining the core principles of the SoroSusu protocol: accessibility, security, and community trust.
+This implementation enables larger, more serious capital rotation while maintaining the core principles of the VeriNode protocol: accessibility, security, and community trust.

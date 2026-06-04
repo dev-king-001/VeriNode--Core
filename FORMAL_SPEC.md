@@ -1,6 +1,6 @@
 # Formal Verification Specification
 
-This document defines the mathematical specifications and safety properties for formal verification of the SoroSusu ROSCA contract.
+This document defines the mathematical specifications and safety properties for formal verification of the VeriNode ROSCA contract.
 
 ## Safety Invariants
 

@@ -1,7 +1,7 @@
 # Emergency Withdrawal Pattern Implementation
 
 ## Summary
-Successfully implemented the emergency withdrawal safety mechanism for the SoroSusu savings contract.
+Successfully implemented the emergency withdrawal safety mechanism for the VeriNode savings contract.
 
 ## Implementation Details
 
