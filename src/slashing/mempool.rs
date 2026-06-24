@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 
 // Mocking required types since the original codebase is absent
 pub type ValidatorIndex = u64;
@@ -20,14 +21,14 @@ const MEMPOOL_CAPACITY: usize = 1024;
 
 pub struct SlashingMempool {
     evidence: Vec<Evidence>, 
-    rate_limits: HashMap<ValidatorIndex, u8>,
+    rate_limits: BTreeMap<ValidatorIndex, u8>,
 }
 
 impl SlashingMempool {
     pub fn new() -> Self {
         Self {
             evidence: Vec::with_capacity(MEMPOOL_CAPACITY),
-            rate_limits: HashMap::new(),
+            rate_limits: BTreeMap::new(),
         }
     }
 
