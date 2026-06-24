@@ -1102,25 +1102,8 @@ impl SoroSusuTrait for SoroSusu {
             panic!("Quorum not met");
         }
 
-        // Calculate result
+        // Calculate result and update stats
         let total_votes = proposal.for_votes + proposal.against_votes;
-        if total_votes == 0 {
-            proposal.status = ProposalStatus::Rejected;
-        } else {
-            let approval_percentage = (proposal.for_votes * 100) / total_votes;
-            if approval_percentage >= QUADRATIC_MAJORITY as u64 {
-                proposal.status = ProposalStatus::Approved;
-                
-                // Execute the proposal based on type
-                SoroSusu::execute_proposal_logic(&env, &proposal);
-            } else {
-                proposal.status = ProposalStatus::Rejected;
-            }
-        }
-
-        env.storage().instance().set(&proposal_key, &proposal);
-
-        // Update stats
         let stats_key = DataKey::ProposalStats(proposal.circle_id);
         let mut stats: ProposalStats = env.storage().instance().get(&stats_key).unwrap_or(ProposalStats {
             total_proposals: 0,
@@ -1131,13 +1114,23 @@ impl SoroSusuTrait for SoroSusu {
             average_voting_time: 0,
         });
 
-        match proposal.status {
-            ProposalStatus::Approved => stats.approved_proposals += 1,
-            ProposalStatus::Rejected => stats.rejected_proposals += 1,
-            ProposalStatus::Executed => stats.executed_proposals += 1,
-            _ => {}
+        if total_votes == 0 {
+            proposal.status = ProposalStatus::Rejected;
+            stats.rejected_proposals += 1;
+        } else {
+            let approval_percentage = (proposal.for_votes * 100) / total_votes;
+            if approval_percentage >= QUADRATIC_MAJORITY as u64 {
+                SoroSusu::execute_proposal_logic(&env, &proposal);
+                proposal.status = ProposalStatus::Executed;
+                stats.approved_proposals += 1;
+                stats.executed_proposals += 1;
+            } else {
+                proposal.status = ProposalStatus::Rejected;
+                stats.rejected_proposals += 1;
+            }
         }
 
+        env.storage().instance().set(&proposal_key, &proposal);
         env.storage().instance().set(&stats_key, &stats);
     }
 
