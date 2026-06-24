@@ -8,6 +8,7 @@ use soroban_sdk::{
     Address, Env, String, Vec,
 };
 
+pub mod slashing_core;
 // Cryptographic primitives and attestation signature verification.
 // `crypto` provides a dependency-free SHA-256, SSZ-style merkleization, and
 // domain separation; `attestation` computes domain-separated signing roots so
