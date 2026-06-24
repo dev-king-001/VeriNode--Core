@@ -4,6 +4,8 @@ use soroban_sdk::{
     Address, Env, String, Vec,
 };
 
+pub mod slashing_core;
+
 // --- ERROR CODES ---
 
 #[contracterror]
