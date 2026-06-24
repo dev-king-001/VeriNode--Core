@@ -276,7 +276,7 @@
                                 "symbol": "deadline_timestamp"
                               },
                               "val": {
-                                "u64": 176400
+                                "u64": 3600
                               }
                             },
                             {

@@ -110,7 +110,7 @@ fn test_vote_on_leniency_approval() {
         let circle_key = DataKey::Circle(circle_id);
         let circle = env.storage().instance().get::<_, sorosusu_contracts::CircleInfo>(&circle_key).unwrap();
         assert!(circle.grace_period_end.is_some());
-        assert_eq!(circle.grace_period_end.unwrap(), circle.deadline_timestamp);
+        assert_eq!(circle.grace_period_end.unwrap(), circle.deadline_timestamp + 172800);
     });
 }
 

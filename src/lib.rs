@@ -8,6 +8,8 @@ use soroban_sdk::{
 pub mod slashing_core;
 pub mod slashing;
 pub mod network;
+pub mod reputation;
+pub mod attestation_core;
 // Cryptographic primitives and attestation signature verification.
 // `crypto` provides a dependency-free SHA-256, SSZ-style merkleization, and
 // domain separation; `attestation` computes domain-separated signing roots so
@@ -881,7 +883,7 @@ impl SoroSusuTrait for SoroSusu {
 
         // Check if voting should be finalized early (if majority reached)
         let total_possible_votes = (circle.member_count - 1) as u32; // Exclude requester
-        let votes_needed_for_majority = (total_possible_votes * SIMPLE_MAJORITY_THRESHOLD) / 100;
+        let votes_needed_for_majority = (total_possible_votes * SIMPLE_MAJORITY_THRESHOLD + 99) / 100;
         
         if votes_needed_for_majority > 0 && request.approve_votes >= votes_needed_for_majority {
             request.status = LeniencyRequestStatus::Approved;
@@ -1091,7 +1093,7 @@ impl SoroSusuTrait for SoroSusu {
         // Check quorum
         let circle_key = DataKey::Circle(proposal.circle_id);
         let circle: CircleInfo = env.storage().instance().get(&circle_key).expect("Circle not found");
-        let required_quorum = (circle.member_count * QUADRATIC_QUORUM) / 100;
+        let required_quorum = (circle.member_count * QUADRATIC_QUORUM + 99) / 100;
         proposal.quorum_met = proposal.total_voting_power >= required_quorum as u64;
 
         env.storage().instance().set(&proposal_key, &proposal);
@@ -1375,7 +1377,7 @@ impl SoroSusu {
         let mut circle: CircleInfo = env.storage().instance().get(&circle_key).expect("Circle not found");
         
         let total_possible_votes = (circle.member_count - 1) as u32; // Exclude requester
-        let minimum_participation = (total_possible_votes * MINIMUM_VOTING_PARTICIPATION) / 100;
+        let minimum_participation = (total_possible_votes * MINIMUM_VOTING_PARTICIPATION + 99) / 100;
         
         let mut final_status = LeniencyRequestStatus::Expired;
         
