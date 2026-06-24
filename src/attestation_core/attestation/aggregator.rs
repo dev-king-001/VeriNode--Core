@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_aggregate_single_node() {
-        let entries = vec![
+        let entries = [
             make_entry(1, 10, 100),
             make_entry(1, 20, 200),
         ];
